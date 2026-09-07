@@ -1,0 +1,23 @@
+{
+  "extends": "../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../vendor/cosmokit" },
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../../vendor/schemastery" },
+    { "path": "../../core/tools" },
+    { "path": "../../credentials/credentials" },
+    { "path": "../../settings/settings" },
+    { "path": "../mcp-client" },
+    { "path": "../../client/locale" },
+    { "path": "../../client/ui-renderer" },
+    { "path": "../../client/ui-settings" },
+    { "path": "../../client/ui-settings-plugins" },
+    { "path": "../../client/ui-slots" },
+    { "path": "../../api/remotes/tsconfig.client.json" }
+  ]
+}

@@ -1,0 +1,5 @@
+- insert:
+    - id: mcp-settings
+      name: dsh-mcp-settings
+      config:
+        servers: []
