@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {
@@ -19,23 +18,20 @@ export type McpSettingsCardProps =
 export function McpSettingsCard(props: McpSettingsCardProps) {
   const state = props.useMcpSettingsCard(snapshot => snapshot)
   const [draft, setDraft] = useState<readonly McpServerSettings[]>(state.servers)
-  const [authorization, setAuthorization] = useState<Record<string, string>>({})
   const [tests, setTests] = useState<Record<string, McpConnectionTestResult>>({})
   const [expandedTools, setExpandedTools] = useState<Record<string, string | undefined>>({})
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState<string>()
-  const [clearingAuthorization, setClearingAuthorization] = useState<string>()
   const [message, setMessage] = useState<string>()
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     setDraft(state.servers)
-    setAuthorization({})
   }, [state.revision])
 
   const valid = useMemo(() => isValid(draft), [draft])
   if (!state.available) return null
-  const disabled = !state.writable || saving || testing !== undefined || clearingAuthorization !== undefined
+  const disabled = !state.writable || saving || testing !== undefined
 
   const update = (id: string, change: Partial<McpServerSettings>) => {
     setDraft(current => current.map(server => server.id === id ? { ...server, ...change } : server))
@@ -48,11 +44,9 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
     setDraft(current => current.map(item => item.id === server.id ? replacement : item))
     setMessage(undefined)
     setFailed(false)
-    setAuthorization(current => omitRecordKey(current, server.id))
   }
   const remove = (id: string) => {
     setDraft(current => current.filter(server => server.id !== id))
-    setAuthorization(current => omitRecordKey(current, id))
     setTests(current => omitRecordKey(current, id))
     setExpandedTools(current => omitRecordKey(current, id))
   }
@@ -88,41 +82,13 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
     entries.splice(position, 1)
     update(server.id, { [field]: Object.fromEntries(entries) })
   }
-  const clearAuthorization = async (server: McpServerSettings) => {
-    if (server.authorizationRef === undefined || clearingAuthorization !== undefined) return
-    setClearingAuthorization(server.id)
-    setMessage(undefined)
-    setFailed(false)
-    try {
-      await props.clearAuthorization(server.authorizationRef)
-      setAuthorization(current => omitRecordKey(current, server.id))
-      setMessage(props.t('authorizationCleared'))
-    } catch (error) {
-      setFailed(true)
-      setMessage(error instanceof Error ? error.message : String(error))
-    } finally {
-      setClearingAuthorization(undefined)
-    }
-  }
-  const updateCredentialReference = (server: McpServerSettings, value: string) => {
-    const authorizationRef = value.trim()
-    setDraft(current => current.map((item) => {
-      if (item.id !== server.id) return item
-      if (authorizationRef.length === 0) {
-        const { authorizationRef: _removed, ...without } = item
-        return without
-      }
-      return { ...item, authorizationRef }
-    }))
-  }
   const save = async () => {
     if (!valid || saving) return
     setSaving(true)
     setMessage(undefined)
     setFailed(false)
     try {
-      await props.saveServices(draft, authorization)
-      setAuthorization({})
+      await props.saveServices(draft)
       setMessage(props.t('saved'))
     } catch (error) {
       setFailed(true)
@@ -133,14 +99,13 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
   }
   const test = async (server: McpServerSettings) => {
     const saved = state.servers.find(candidate => candidate.id === server.id)
-    const pendingAuthorization = authorization[server.id]?.trim().length !== 0
     if (saved === undefined || JSON.stringify(saved) !== JSON.stringify(server)) {
       setFailed(true)
       setMessage(props.t('saveBeforeTest'))
       return
     }
     setTesting(server.id)
-    setMessage(pendingAuthorization ? props.t('testUsesSavedAuthorization') : undefined)
+    setMessage(undefined)
     setFailed(false)
     try {
       const result = await props.testConnection(server.id)
@@ -198,13 +163,7 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
             ? <HttpFields
               server={server}
               disabled={disabled}
-              credentials={state.credentials}
-              authorization={authorization}
               update={update}
-              updateCredentialReference={updateCredentialReference}
-              setAuthorization={setAuthorization}
-              clearAuthorization={clearAuthorization}
-              clearingAuthorization={clearingAuthorization}
               addMapEntry={addMapEntry}
               updateMap={updateMap}
               removeMapEntry={removeMapEntry}
@@ -307,13 +266,7 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
 function HttpFields({
   server,
   disabled,
-  credentials,
-  authorization,
   update,
-  updateCredentialReference,
-  setAuthorization,
-  clearAuthorization,
-  clearingAuthorization,
   addMapEntry,
   updateMap,
   removeMapEntry,
@@ -331,40 +284,6 @@ function HttpFields({
         placeholder="http://localhost:8080/mcp"
       />
     </label>
-    <label style={styles.label}>
-      {t('authorization')}
-      <input
-        style={styles.input}
-        type="password"
-        autoComplete="off"
-        value={authorization[server.id] ?? ''}
-        disabled={disabled}
-        onChange={(event) => { setAuthorization(current => ({ ...current, [server.id]: event.target.value })) }}
-        placeholder={credentials[server.id] === true ? '••••••••' : 'Bearer …'}
-      />
-    </label>
-    <p style={styles.hint}>
-      {credentials[server.id] === true ? t('authorizationSet') : t('authorizationUnset')} · {t('authorizationHint')}
-    </p>
-    <label style={styles.label}>
-      {t('credentialReference')}
-      <input
-        style={styles.input}
-        value={server.authorizationRef ?? ''}
-        disabled={disabled}
-        onChange={(event) => { updateCredentialReference(server, event.target.value) }}
-        placeholder="DSH_MCP_SERVICE_AUTHORIZATION"
-      />
-    </label>
-    <p style={styles.hint}>{t('credentialReferenceHint')}</p>
-    <button
-      type="button"
-      style={styles.secondaryButton}
-      disabled={disabled || server.authorizationRef === undefined || credentials[server.id] !== true}
-      onClick={() => { void clearAuthorization(server) }}
-    >
-      {clearingAuthorization === server.id ? t('clearingAuthorization') : t('clearAuthorization')}
-    </button>
     <MapEditor
       server={server}
       field="headers"
@@ -435,13 +354,7 @@ function StdioFields({
 type FieldsProps = {
   server: McpServerSettings
   disabled: boolean
-  credentials: Readonly<Record<string, boolean>>
-  authorization: Readonly<Record<string, string>>
-  clearingAuthorization: string | undefined
   update: (id: string, change: Partial<McpServerSettings>) => void
-  updateCredentialReference: (server: McpServerSettings, value: string) => void
-  setAuthorization: Dispatch<SetStateAction<Record<string, string>>>
-  clearAuthorization: (server: McpServerSettings) => Promise<void>
   addMapEntry: (server: McpServerSettings, field: 'headers' | 'env') => void
   updateMap: (
     server: McpServerSettings,
@@ -610,12 +523,11 @@ function asHttp(server: McpServerSettings): McpServerSettings {
     transport: 'streamable-http',
     url: '',
     headers: {},
-    authorizationRef: `DSH_MCP_${server.id.toUpperCase()}_AUTHORIZATION`,
   }
 }
 
 function asStdio(server: McpServerSettings): McpServerSettings {
-  const { url: _url, headers: _headers, authorizationRef: _authorizationRef, ...common } = server
+  const { url: _url, headers: _headers, ...common } = server
   return { ...common, transport: 'stdio', command: '', args: [], env: {}, cwd: '' }
 }
 
@@ -643,7 +555,7 @@ function isValid(servers: readonly McpServerSettings[]): boolean {
     const headers = new Set<string>()
     return Object.keys(server.headers ?? {}).every((name) => {
       const key = name.trim().toLowerCase()
-      if (!key || key === 'authorization' || headers.has(key)) return false
+      if (!key || headers.has(key)) return false
       headers.add(key)
       return true
     })
@@ -659,7 +571,6 @@ function newServer(): McpServerSettings {
     transport: 'streamable-http',
     url: '',
     headers: {},
-    authorizationRef: `DSH_MCP_${id.toUpperCase()}_AUTHORIZATION`,
     toolCallTimeoutMs: 60_000,
     failOnStartupError: false,
   }

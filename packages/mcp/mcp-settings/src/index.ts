@@ -1,8 +1,6 @@
 /** Settings-owned MCP client instances and safe connection diagnostics. */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { credentialRef, isCredentialRefName } from '@deepseek-ai/dsh-credentials'
-import type {} from '@deepseek-ai/dsh-credentials'
 import * as McpClient from '@deepseek-ai/dsh-mcp-client'
 import type { Config as McpClientConfig } from '@deepseek-ai/dsh-mcp-client'
 import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
@@ -40,8 +38,6 @@ export interface StreamableHttpMcpServer extends McpServerBase {
   transport: 'streamable-http'
   url: string
   headers: Record<string, string>
-  /** Credential reference holding the complete Authorization header value. */
-  authorizationRef?: string
 }
 
 /** An MCP server started locally and reached through its standard input/output. */
@@ -75,7 +71,6 @@ const McpServerSchema = z.union([
     transport: z.const('streamable-http').default('streamable-http'),
     url: z.string().required(),
     headers: z.dict(z.string()).default({}),
-    authorizationRef: z.string(),
   }),
   z.object({
     ...CommonServerSchema,
@@ -94,7 +89,7 @@ export const Config: z<Config> = z.object({
 export const name = 'mcp-settings'
 export const inject = ['tools']
 
-/** Validate the durable configuration without ever resolving or exposing secrets. */
+/** Validate the durable configuration. */
 export function validateConfig(config: Config): void {
   const ids = new Set<string>()
   const serverNames = new Set<string>()
@@ -117,9 +112,6 @@ function validateHttpServer(server: StreamableHttpMcpServer): void {
   if (endpoint.username.length > 0 || endpoint.password.length > 0) {
     throw new Error(`mcp-settings: "${server.serverName}" endpoint must not include credentials`)
   }
-  if (server.authorizationRef !== undefined && !isCredentialRefName(server.authorizationRef)) {
-    throw new Error(`mcp-settings: "${server.serverName}" has an invalid Authorization credential reference`)
-  }
   validateHeaderNames(server.serverName, server.headers)
 }
 
@@ -137,16 +129,13 @@ function validateHeaderNames(serverName: string, headers: Record<string, string>
   for (const header of Object.keys(headers)) {
     const normalized = header.trim().toLowerCase()
     if (normalized.length === 0) throw new Error(`mcp-settings: "${serverName}" has an empty header name`)
-    if (normalized === 'authorization') {
-      throw new Error(`mcp-settings: store Authorization for "${serverName}" in its credential field, not headers`)
-    }
     if (headerNames.has(normalized)) throw new Error(`mcp-settings: "${serverName}" has duplicate header "${header}"`)
     headerNames.add(normalized)
   }
 }
 
 /** Turn one managed row into the upstream MCP client's one-server config. */
-export async function resolveMcpClientConfig(ctx: Context, server: McpServer): Promise<McpClientConfig> {
+export function resolveMcpClientConfig(server: McpServer): McpClientConfig {
   if (server.transport === 'stdio') {
     return {
       transport: 'stdio', serverName: server.serverName, command: server.command,
@@ -154,14 +143,8 @@ export async function resolveMcpClientConfig(ctx: Context, server: McpServer): P
       toolCallTimeoutMs: server.toolCallTimeoutMs, failOnStartupError: server.failOnStartupError,
     }
   }
-  const headers = { ...server.headers }
-  if (server.authorizationRef !== undefined) {
-    const credentials = ctx.get('credentials')
-    const resolved = credentials === undefined ? undefined : await credentials.resolve(credentialRef(server.authorizationRef))
-    if (resolved !== undefined) headers.Authorization = resolved.value
-  }
   return {
-    transport: 'streamable-http', serverName: server.serverName, url: server.url, headers,
+    transport: 'streamable-http', serverName: server.serverName, url: server.url, headers: { ...server.headers },
     toolCallTimeoutMs: server.toolCallTimeoutMs, failOnStartupError: server.failOnStartupError,
   }
 }
@@ -172,7 +155,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-/** Host-only diagnostic endpoint. It resolves saved credentials but never returns them. */
+/** Host-only diagnostic endpoint. It never returns configured header values. */
 export class McpConnectionProbeService extends TypertRemoteService {
   constructor(ctx: Context, private readonly source: () => Config) {
     super(ctx, 'mcpSettings')
@@ -186,7 +169,7 @@ export class McpConnectionProbeService extends TypertRemoteService {
     let resolved: McpClientConfig | undefined
     try {
       validateConfig({ servers: [server] })
-      resolved = await resolveMcpClientConfig(this.ctx, server)
+      resolved = resolveMcpClientConfig(server)
       const client = new Client({ name: 'dsh-mcp-settings-test', version: '0.1.0' }, { capabilities: {} })
       try {
         await withTimeout(client.connect(createProbeTransport(resolved)), CONNECTION_TEST_TIMEOUT_MS)
@@ -292,7 +275,7 @@ class McpConnectionManager {
     try {
       for (const server of config.servers) {
         if (!server.enabled) continue
-        const fiber = this.ctx.plugin(McpClient, await resolveMcpClientConfig(this.ctx, server))
+        const fiber = this.ctx.plugin(McpClient, resolveMcpClientConfig(server))
         next.push(fiber)
         await fiber
       }
@@ -328,8 +311,5 @@ export function apply(ctx: Context, config: Config): void {
     })
   })
 
-  ctx.on('credentials/reference-updated', (ref) => {
-    if (source().servers.some(server => server.transport === 'streamable-http' && server.authorizationRef === ref)) manager.refresh()
-  })
   ctx.effect(() => () => manager.dispose(), 'mcp-settings: connection manager')
 }

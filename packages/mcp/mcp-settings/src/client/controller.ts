@@ -2,19 +2,11 @@ import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from './remote.ts'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 
 /** The minimal observable interface required by the settings card hook. */
 interface ObservableSnapshot<T> {
   getSnapshot(): T
   subscribe(listener: () => void): () => void
-}
-
-/** The current Harness client assembly does not yet export this generated namespace type. */
-interface CredentialsRemote {
-  describe(refs: string[]): Promise<RemoteResult<Record<string, { configured: boolean }>>>
-  set(ref: string, value: string): Promise<RemoteResult<void>>
-  unset(ref: string): Promise<RemoteResult<void>>
 }
 
 export type McpTransport = 'streamable-http' | 'stdio'
@@ -27,7 +19,6 @@ export interface McpServerSettings {
   transport: McpTransport
   url?: string
   headers?: Record<string, string>
-  authorizationRef?: string
   command?: string
   args?: string[]
   env?: Record<string, string>
@@ -57,13 +48,11 @@ export interface McpSettingsCardState {
   writable: boolean
   revision: number
   servers: readonly McpServerSettings[]
-  credentials: Readonly<Record<string, boolean>>
 }
 
 export interface McpSettingsCardFace {
   hooks: { mcpSettingsCard: ObservableSnapshot<McpSettingsCardState> }
-  saveServices(servers: readonly McpServerSettings[], authorizations: Readonly<Record<string, string>>): Promise<void>
-  clearAuthorization(ref: string): Promise<void>
+  saveServices(servers: readonly McpServerSettings[]): Promise<void>
   testConnection(id: string): Promise<McpConnectionTestResult>
 }
 
@@ -81,47 +70,39 @@ class Snapshot<T> implements ObservableSnapshot<T> {
   }
 }
 
-/** Browser owner that bridges settings, credentials, and the Host diagnostic Remote endpoint. */
+/** Browser owner that bridges settings and the Host diagnostic Remote endpoint. */
 export class McpSettingsCardController {
   private readonly store = new Snapshot<McpSettingsCardState>({
-    available: false, writable: false, revision: 0, servers: [], credentials: {},
+    available: false, writable: false, revision: 0, servers: [],
   })
 
   constructor(private readonly scope: SettingsScope<McpSettingsSection>, private readonly ctx: ClientContext) {
-    scope.subscribe(() => { void this.adopt() })
-    void this.adopt()
+    scope.subscribe(() => { this.adopt() })
+    this.adopt()
   }
 
   inject(): McpSettingsCardFace {
     return {
       hooks: { mcpSettingsCard: this.store },
-      saveServices: async (servers, authorizations) => { await this.save(servers, authorizations) },
-      clearAuthorization: async (ref) => { await this.clearAuthorization(ref) },
+      saveServices: async (servers) => { await this.save(servers) },
       testConnection: async id => await this.testConnection(id),
     }
   }
 
-  private async adopt(): Promise<void> {
+  private adopt(): void {
     const snapshot = this.scope.getSnapshot()
     const servers = snapshot.value?.servers ?? []
     this.store.set({
       available: snapshot.status === 'ready', writable: snapshot.writable, revision: snapshot.revision ?? 0,
-      servers: servers.map(copyServer), credentials: await this.describeCredentials(servers),
+      servers: servers.map(copyServer),
     })
   }
 
-  private async save(input: readonly McpServerSettings[], authorizations: Readonly<Record<string, string>>): Promise<void> {
+  private async save(input: readonly McpServerSettings[]): Promise<void> {
     const servers = input.map(copyServer)
     validateClientServers(servers)
     await this.scope.set('servers', servers)
-    for (const server of servers) {
-      if (server.transport !== 'streamable-http') continue
-      const value = authorizations[server.id]?.trim()
-      if (value === undefined || value.length === 0 || server.authorizationRef === undefined) continue
-      const response = await credentialsRemote(this.ctx).set(server.authorizationRef, value)
-      if (!response.ok) throw new Error(response.error.message)
-    }
-    await this.adopt()
+    this.adopt()
   }
 
   private async testConnection(id: string): Promise<McpConnectionTestResult> {
@@ -130,31 +111,6 @@ export class McpSettingsCardController {
     return response.value
   }
 
-  private async describeCredentials(servers: readonly McpServerSettings[]): Promise<Record<string, boolean>> {
-    const refs = [...new Set(servers.flatMap(server =>
-      server.transport === 'streamable-http' && server.authorizationRef !== undefined ? [server.authorizationRef] : []))]
-    if (refs.length === 0) return {}
-    const response = await credentialsRemote(this.ctx).describe(refs)
-    if (!response.ok) return {}
-    const result: Record<string, boolean> = {}
-    for (const server of servers) {
-      if (server.transport === 'streamable-http' && server.authorizationRef !== undefined) {
-        result[server.id] = response.value[server.authorizationRef]?.configured === true
-      }
-    }
-    return result
-  }
-
-  private async clearAuthorization(ref: string): Promise<void> {
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(ref)) throw new Error('The credential reference is invalid.')
-    const response = await credentialsRemote(this.ctx).unset(ref)
-    if (!response.ok) throw new Error(response.error.message)
-    await this.adopt()
-  }
-}
-
-function credentialsRemote(ctx: ClientContext): CredentialsRemote {
-  return (ctx.remote as unknown as { credentials: CredentialsRemote }).credentials
 }
 
 function copyServer(server: McpServerSettings): McpServerSettings {
@@ -166,7 +122,6 @@ function copyServer(server: McpServerSettings): McpServerSettings {
     id: server.id, enabled: server.enabled, serverName: server.serverName, transport,
     ...(server.url === undefined ? {} : { url: server.url }),
     ...(server.headers === undefined ? {} : { headers: { ...server.headers } }),
-    ...(server.authorizationRef === undefined ? {} : { authorizationRef: server.authorizationRef }),
     ...(server.command === undefined ? {} : { command: server.command }),
     ...(server.args === undefined ? {} : { args: [...server.args] }),
     ...(server.env === undefined ? {} : { env: { ...server.env } }),
@@ -198,14 +153,10 @@ function validateHttpServer(server: McpServerSettings): void {
   try { endpoint = new URL(server.url ?? '') } catch { throw new Error('Each MCP endpoint must be a valid URL.') }
   if (endpoint.protocol !== 'http:' && endpoint.protocol !== 'https:') throw new Error('Each MCP endpoint must use http or https.')
   if (endpoint.username.length > 0 || endpoint.password.length > 0) throw new Error('MCP endpoint URLs must not include credentials.')
-  if (server.authorizationRef !== undefined && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(server.authorizationRef)) {
-    throw new Error('Each credential reference must be a valid environment-variable name.')
-  }
   const headerNames = new Set<string>()
   for (const header of Object.keys(server.headers ?? {})) {
     const normalized = header.trim().toLowerCase()
     if (normalized.length === 0) throw new Error('Custom header names cannot be empty.')
-    if (normalized === 'authorization') throw new Error('Authorization must be stored in the credential field.')
     if (headerNames.has(normalized)) throw new Error('Custom header names must be unique.')
     headerNames.add(normalized)
   }

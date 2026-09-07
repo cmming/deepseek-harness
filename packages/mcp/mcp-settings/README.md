@@ -13,7 +13,7 @@ restart is not required.
 Install the built bundle into a Web profile:
 
 ```sh
-dsh plugin --profile web add ./dsh-mcp-settings-0.1.8.tgz
+dsh plugin --profile web add ./dsh-mcp-settings-0.1.9.tgz
 dsh --profile web
 ```
 
@@ -29,12 +29,11 @@ The service card exposes every field implemented by this package:
 | Transport | Select Streamable HTTP or stdio. The card reveals only the fields relevant to the selection. |
 | HTTP endpoint | Required HTTP(S) endpoint. URLs containing credentials are rejected. |
 | stdio command | Command, one argument per line, working directory, and additional environment variables. Arguments are passed directly without shell expansion. |
-| Authorization and credential reference | Authorization is write-only. The credential reference can be selected or changed, and a stored value can be cleared without being revealed. |
-| Custom request headers | Editable key/value headers. `Authorization` is rejected so secrets remain in the credentials provider. |
+| Custom request headers | Editable key/value headers, including `Authorization`. For example, add `Authorization` with value `Bearer <token>`. |
 | Tool call timeout | Positive integer in milliseconds; defaults to 60000. |
 | Startup failure policy | Select whether a failed first connection should fail the service instance. |
 | Enabled state | Disabled services are not connected and do not contribute tools. |
-| Test connection | Uses the saved Host-side configuration and stored credentials to make a temporary connection. On success, it shows a collapsible, tool-style list from paginated `tools/list`: count, name, description, and declared input fields/types. Values configured as credentials, headers, or stdio environment values are never returned in the diagnostic message. |
+| Test connection | Uses the saved Host-side configuration to make a temporary connection. On success, it shows a collapsible, tool-style list from paginated `tools/list`: count, name, description, and declared input fields/types. Header and stdio environment values are never returned in the diagnostic message. |
 
 ## Add the CM Agent endpoint
 
@@ -44,13 +43,10 @@ Create a service with:
 | --- | --- |
 | Tool namespace | `cmagent` |
 | Streamable HTTP endpoint | `http://localhost:8080/mcp` |
-| Authorization header | `Bearer <your CM Agent token>` |
+| Custom request header | Name: `Authorization`; value: `Bearer <your CM Agent token>` |
 
-The authorization value is write-only in the UI. It is stored through the
-Harness credentials provider (normally `$DSH_HOME/.credentials.yaml`), while
-the settings document stores only a reference such as
-`DSH_MCP_<service-id>_AUTHORIZATION`. It is never written to this package,
-`cordis.patch.yml`, or the browser settings response.
+All request headers, including `Authorization`, are stored directly in the
+MCP service settings. Limit write access to this settings document accordingly.
 
 ## Deployment configuration
 
@@ -67,19 +63,14 @@ The UI is optional. A deployment can seed connections through its own patch:
             serverName: cmagent
             transport: streamable-http
             url: http://localhost:8080/mcp
-            authorizationRef: CM_AGENT_MCP_AUTHORIZATION
-            headers: {}
+            headers:
+              Authorization: "Bearer <your CM Agent token>"
             toolCallTimeoutMs: 60000
             failOnStartupError: false
 ```
 
-Supply the value for `CM_AGENT_MCP_AUTHORIZATION` through the Harness
-credentials provider. The complete header value must include its scheme, for
-example `Bearer …`.
-
-Only non-sensitive headers belong in `headers`. The plugin rejects an
-`Authorization` entry there so access tokens cannot accidentally enter the
-settings document.
+Header values are persisted in the service settings. The complete Authorization
+value must include its scheme, for example `Bearer …`.
 
 For a local stdio server, use this shape instead:
 
@@ -96,9 +87,8 @@ For a local stdio server, use this shape instead:
             failOnStartupError: false
 ```
 
-Run **Save services** before **Test connection**. This ensures a new write-only
-Authorization value is stored by the credential provider before the Host starts
-the temporary test connection.
+Run **Save services** before **Test connection** so the Host tests the current
+service settings and request headers.
 
 ## Build from source
 

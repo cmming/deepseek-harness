@@ -17,13 +17,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** Required browser services. */
-export const inject = ['slots', 'locale', 'remote', 'remote.credentials', 'settingsScope']
+export const inject = ['slots', 'locale', 'remote', 'settingsScope']
 
 /** Register the MCP manager card in Settings → Plugins → Plugin configuration. */
 export async function apply(ctx: ClientContext): Promise<void> {
   const disposeRemote = await ctx.remote.$mount(mcpSettingsRemote)
   const ui = ctx.inject(
-    ['slots', 'locale', 'remote.credentials', 'remote.mcpSettings', 'settingsScope'],
+    ['slots', 'locale', 'remote.mcpSettings', 'settingsScope'],
     registerUi,
   )
   try {

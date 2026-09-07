@@ -29,9 +29,9 @@ export const TYPERT = {
   }],
   model: {
     services: [{
-      description: 'Host-only diagnostic endpoint. It resolves saved credentials but never returns them.',
+      description: 'Host-only diagnostic endpoint. It never returns configured header values.',
       summary: 'Host-only diagnostic endpoint.', tags: [],
-      jsDoc: '/** Host-only diagnostic endpoint. It resolves saved credentials but never returns them. */',
+      jsDoc: '/** Host-only diagnostic endpoint. It never returns configured header values. */',
       key: 'mcpSettings', exportName: 'McpConnectionProbeService',
       members: [{ kind: 'method', name: 'testConnection', signature: '@Remote async testConnection(id: string): Promise<McpConnectionTestResult>' }],
       types: [{ name: 'McpConnectionTestResult', declaration: 'export interface McpConnectionTestResult { ok: boolean; durationMs: number; toolNames: string[]; tools: McpDiscoveredTool[]; error?: string; }' }],
