@@ -33,6 +33,7 @@ export interface McpSettingsCardState {
 export interface McpSettingsCardFace {
   hooks: { mcpSettingsCard: ObservableSnapshot<McpSettingsCardState> }
   saveServices(servers: readonly McpServerSettings[], authorizations: Readonly<Record<string, string>>): Promise<void>
+  clearAuthorization(ref: string): Promise<void>
 }
 
 /** Lightweight subscription source; the renderer supplies the React selector hook. */
@@ -73,6 +74,7 @@ export class McpSettingsCardController {
     return {
       hooks: { mcpSettingsCard: this.store },
       saveServices: async (servers, authorizations) => { await this.save(servers, authorizations) },
+      clearAuthorization: async (ref) => { await this.clearAuthorization(ref) },
     }
   }
 
@@ -119,6 +121,14 @@ export class McpSettingsCardController {
     }
     return result
   }
+
+  /** Remove a writeable Authorization value without exposing it to the browser. */
+  private async clearAuthorization(ref: string): Promise<void> {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(ref)) throw new Error('The credential reference is invalid.')
+    const response = await this.ctx.remote.credentials.unset(ref)
+    if (!response.ok) throw new Error(response.error.message)
+    await this.adopt()
+  }
 }
 
 function copyServer(server: McpServerSettings): McpServerSettings {
@@ -147,6 +157,20 @@ function validateClientServers(servers: readonly McpServerSettings[]): void {
     let endpoint: URL
     try { endpoint = new URL(server.url) } catch { throw new Error('Each MCP endpoint must be a valid URL.') }
     if (endpoint.protocol !== 'http:' && endpoint.protocol !== 'https:') throw new Error('Each MCP endpoint must use http or https.')
+    if (server.authorizationRef !== undefined && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(server.authorizationRef)) {
+      throw new Error('Each credential reference must be a valid environment-variable name.')
+    }
+    if (!Number.isInteger(server.toolCallTimeoutMs) || server.toolCallTimeoutMs <= 0) {
+      throw new Error('Each tool call timeout must be a positive whole number.')
+    }
+    const headerNames = new Set<string>()
+    for (const header of Object.keys(server.headers ?? {})) {
+      const normalized = header.trim().toLowerCase()
+      if (normalized.length === 0) throw new Error('Custom header names cannot be empty.')
+      if (normalized === 'authorization') throw new Error('Authorization must be stored in the credential field.')
+      if (headerNames.has(normalized)) throw new Error('Custom header names must be unique.')
+      headerNames.add(normalized)
+    }
   }
 }
 

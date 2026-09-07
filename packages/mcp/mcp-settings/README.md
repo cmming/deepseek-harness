@@ -13,11 +13,26 @@ restart is not required.
 Install the built bundle into a Web profile:
 
 ```sh
-dsh plugin --profile web add ./dsh-mcp-settings-0.1.1.tgz
+dsh plugin --profile web add ./dsh-mcp-settings-0.1.2.tgz
 dsh --profile web
 ```
 
 Then open Settings → Plugins → Plugin configuration → MCP services.
+
+## Settings page fields
+
+The service card exposes every field implemented by this package:
+
+| Field | Behavior |
+| --- | --- |
+| Service id | Generated when a service is added and shown read-only, so its credential association remains stable. |
+| Transport | Shown as Streamable HTTP, which is the only transport this package currently implements. |
+| Tool namespace and endpoint | Required service identity and HTTP(S) endpoint. |
+| Authorization and credential reference | Authorization is write-only. The credential reference can be selected or changed, and a stored value can be cleared without being revealed. |
+| Custom request headers | Editable key/value headers. `Authorization` is rejected so secrets remain in the credentials provider. |
+| Tool call timeout | Positive integer in milliseconds; defaults to 60000. |
+| Startup failure policy | Select whether a failed first connection should fail the service instance. |
+| Enabled state | Disabled services are not connected and do not contribute tools. |
 
 ## Add the CM Agent endpoint
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
-import type { McpSettingsCardFace, McpSettingsCardState, McpServerSettings } from './controller.ts'
+import type { McpSettingsCardFace, McpServerSettings } from './controller.ts'
 
 /** Props emitted by the settings-slot renderer for this card. */
 export type McpSettingsCardProps =
@@ -15,6 +15,7 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
   const [draft, setDraft] = useState<readonly McpServerSettings[]>(state.servers)
   const [authorization, setAuthorization] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  const [clearingAuthorization, setClearingAuthorization] = useState<string>()
   const [message, setMessage] = useState<string>()
   const [failed, setFailed] = useState(false)
 
@@ -25,7 +26,7 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
 
   const valid = useMemo(() => isValid(draft), [draft])
   if (!state.available) return null
-  const disabled = !state.writable || saving
+  const disabled = !state.writable || saving || clearingAuthorization !== undefined
 
   const update = (id: string, change: Partial<McpServerSettings>) => {
     setDraft(current => current.map(server => server.id === id ? { ...server, ...change } : server))
@@ -44,6 +45,60 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
   }
   const add = () => {
     setDraft(current => [...current, newServer()])
+    setMessage(undefined)
+    setFailed(false)
+  }
+  const addHeader = (server: McpServerSettings) => {
+    const headers = { ...(server.headers ?? {}) }
+    let index = 1
+    let name = 'X-Custom-Header'
+    while (Object.keys(headers).some(key => key.toLowerCase() === name.toLowerCase())) name = `X-Custom-Header-${index++}`
+    headers[name] = ''
+    update(server.id, { headers })
+  }
+  const updateHeader = (server: McpServerSettings, position: number, field: 'name' | 'value', value: string) => {
+    const entries = Object.entries(server.headers ?? {})
+    const entry = entries[position]
+    if (entry === undefined) return
+    const [name, current] = entry
+    entries[position] = field === 'name' ? [value, current] : [name, value]
+    update(server.id, { headers: Object.fromEntries(entries) })
+  }
+  const removeHeader = (server: McpServerSettings, position: number) => {
+    const entries = Object.entries(server.headers ?? {})
+    entries.splice(position, 1)
+    update(server.id, { headers: Object.fromEntries(entries) })
+  }
+  const clearAuthorization = async (server: McpServerSettings) => {
+    if (server.authorizationRef === undefined || clearingAuthorization !== undefined) return
+    setClearingAuthorization(server.id)
+    setMessage(undefined)
+    setFailed(false)
+    try {
+      await props.clearAuthorization(server.authorizationRef)
+      setAuthorization(current => {
+        const next = { ...current }
+        delete next[server.id]
+        return next
+      })
+      setMessage(props.t('authorizationCleared'))
+    } catch (error) {
+      setFailed(true)
+      setMessage(error instanceof Error ? error.message : String(error))
+    } finally {
+      setClearingAuthorization(undefined)
+    }
+  }
+  const updateCredentialReference = (server: McpServerSettings, value: string) => {
+    const authorizationRef = value.trim()
+    setDraft(current => current.map((item) => {
+      if (item.id !== server.id) return item
+      if (authorizationRef.length === 0) {
+        const { authorizationRef: _removed, ...withoutReference } = item
+        return withoutReference
+      }
+      return { ...item, authorizationRef }
+    }))
     setMessage(undefined)
     setFailed(false)
   }
@@ -72,6 +127,8 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
       {draft.length === 0 ? <p style={styles.empty}>{props.t('empty')}</p> : null}
       {draft.map((server) => (
         <div key={server.id} style={styles.row}>
+          <p style={styles.metadata}>{props.t('serviceId')}: {server.id}</p>
+          <p style={styles.metadata}>{props.t('transport')}: Streamable HTTP</p>
           <label style={styles.label}>
             {props.t('serviceName')}
             <input
@@ -110,6 +167,72 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
             {state.credentials[server.id] === true ? props.t('authorizationSet') : props.t('authorizationUnset')}
             {' · '}{props.t('authorizationHint')}
           </p>
+          <label style={styles.label}>
+            {props.t('credentialReference')}
+            <input
+              style={styles.input}
+              value={server.authorizationRef ?? ''}
+              disabled={disabled}
+              onChange={event => { updateCredentialReference(server, event.target.value) }}
+              placeholder="DSH_MCP_SERVICE_AUTHORIZATION"
+            />
+          </label>
+          <p style={styles.hint}>{props.t('credentialReferenceHint')}</p>
+          <button
+            type="button"
+            style={styles.secondaryButton}
+            disabled={disabled || clearingAuthorization !== undefined || server.authorizationRef === undefined || state.credentials[server.id] !== true}
+            onClick={() => { void clearAuthorization(server) }}
+          >
+            {clearingAuthorization === server.id ? props.t('clearingAuthorization') : props.t('clearAuthorization')}
+          </button>
+          <p style={styles.sectionTitle}>{props.t('customHeaders')}</p>
+          {Object.entries(server.headers ?? {}).map(([name, value], position) => (
+            <div key={`${name}-${position}`} style={styles.headerRow}>
+              <input
+                style={styles.input}
+                value={name}
+                disabled={disabled}
+                onChange={event => { updateHeader(server, position, 'name', event.target.value) }}
+                placeholder={props.t('headerName')}
+              />
+              <input
+                style={styles.input}
+                value={value}
+                disabled={disabled}
+                onChange={event => { updateHeader(server, position, 'value', event.target.value) }}
+                placeholder={props.t('headerValue')}
+              />
+              <button type="button" style={styles.secondaryButton} disabled={disabled} onClick={() => { removeHeader(server, position) }}>
+                {props.t('removeHeader')}
+              </button>
+            </div>
+          ))}
+          <button type="button" style={styles.secondaryButton} disabled={disabled} onClick={() => { addHeader(server) }}>
+            {props.t('addHeader')}
+          </button>
+          <p style={styles.sectionTitle}>{props.t('advanced')}</p>
+          <label style={styles.label}>
+            {props.t('toolCallTimeout')}
+            <input
+              style={styles.input}
+              type="number"
+              min="1"
+              step="1"
+              value={server.toolCallTimeoutMs}
+              disabled={disabled}
+              onChange={event => { update(server.id, { toolCallTimeoutMs: Number(event.target.value) }) }}
+            />
+          </label>
+          <label style={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={server.failOnStartupError}
+              disabled={disabled}
+              onChange={event => { update(server.id, { failOnStartupError: event.target.checked }) }}
+            />
+            {props.t('failOnStartupError')}
+          </label>
           <div style={styles.controls}>
             <label style={styles.checkboxLabel}>
               <input
@@ -150,6 +273,14 @@ function isValid(servers: readonly McpServerSettings[]): boolean {
     } catch {
       return false
     }
+    if (server.authorizationRef !== undefined && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(server.authorizationRef)) return false
+    if (!Number.isInteger(server.toolCallTimeoutMs) || server.toolCallTimeoutMs <= 0) return false
+    const headerNames = new Set<string>()
+    for (const header of Object.keys(server.headers ?? {})) {
+      const normalized = header.trim().toLowerCase()
+      if (normalized.length === 0 || normalized === 'authorization' || headerNames.has(normalized)) return false
+      headerNames.add(normalized)
+    }
   }
   return true
 }
@@ -178,6 +309,9 @@ const styles = {
   label: { display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10, color: 'var(--dsw-alias-label-primary)', fontSize: 13, fontWeight: 500 },
   input: { height: 34, padding: '0 10px', border: '1px solid var(--dsw-alias-border-l3)', borderRadius: 7, background: 'var(--dsw-alias-bg-layer-1)', color: 'var(--dsw-alias-label-primary)', font: 'inherit' },
   hint: { margin: '6px 0', color: 'var(--dsw-alias-label-tertiary)', fontSize: 12, lineHeight: 1.45 },
+  metadata: { margin: '4px 0', color: 'var(--dsw-alias-label-tertiary)', fontSize: 11, fontFamily: 'monospace' },
+  sectionTitle: { margin: '16px 0 8px', color: 'var(--dsw-alias-label-primary)', fontSize: 13, fontWeight: 600 },
+  headerRow: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto', gap: 8, margin: '8px 0', alignItems: 'center' },
   controls: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 14 },
   checkboxLabel: { display: 'flex', gap: 7, alignItems: 'center', color: 'var(--dsw-alias-label-secondary)', fontSize: 13 },
   footer: { display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 16 },

@@ -3,7 +3,10 @@ export type McpSettingsLocaleKey =
   | 'title' | 'description' | 'add' | 'empty' | 'serviceName' | 'namespace'
   | 'endpoint' | 'authorization' | 'authorizationHint' | 'authorizationSet'
   | 'authorizationUnset' | 'enabled' | 'remove' | 'save' | 'saving'
-  | 'saved' | 'readOnly' | 'invalid' | 'connectionHint'
+  | 'saved' | 'readOnly' | 'invalid' | 'connectionHint' | 'serviceId' | 'transport'
+  | 'credentialReference' | 'credentialReferenceHint' | 'clearAuthorization' | 'clearingAuthorization'
+  | 'authorizationCleared' | 'customHeaders' | 'addHeader' | 'removeHeader' | 'headerName' | 'headerValue'
+  | 'advanced' | 'toolCallTimeout' | 'failOnStartupError'
 
 export const en: Record<McpSettingsLocaleKey, string> = {
   title: 'MCP services',
@@ -25,6 +28,21 @@ export const en: Record<McpSettingsLocaleKey, string> = {
   readOnly: 'This deployment stores settings read-only.',
   invalid: 'Each service needs a unique namespace and a valid http(s) endpoint.',
   connectionHint: 'Saving reconnects enabled services and re-discovers their tools. Connection failures remain visible in the Harness log.',
+  serviceId: 'Service id',
+  transport: 'Transport',
+  credentialReference: 'Credential reference',
+  credentialReferenceHint: 'Optional POSIX-style environment-variable name used to store Authorization. Changing it does not move an existing value.',
+  clearAuthorization: 'Clear stored Authorization',
+  clearingAuthorization: 'Clearing Authorization…',
+  authorizationCleared: 'Stored Authorization was cleared.',
+  customHeaders: 'Custom request headers',
+  addHeader: 'Add header',
+  removeHeader: 'Remove header',
+  headerName: 'Header name',
+  headerValue: 'Header value',
+  advanced: 'Advanced settings',
+  toolCallTimeout: 'Tool call timeout in milliseconds',
+  failOnStartupError: 'Fail this service when its initial connection fails',
 }
 
 export const zh: Record<McpSettingsLocaleKey, string> = {
@@ -47,4 +65,19 @@ export const zh: Record<McpSettingsLocaleKey, string> = {
   readOnly: '当前部署的设置为只读。',
   invalid: '每项服务都需要唯一的命名空间，以及有效的 http(s) 地址。',
   connectionHint: '保存后会重连已启用服务并重新发现工具；连接失败会记录在 Harness 日志中。',
+  serviceId: '服务标识',
+  transport: '传输方式',
+  credentialReference: '凭据引用',
+  credentialReferenceHint: '可选的 POSIX 环境变量名称，用于存储 Authorization。修改引用不会迁移已有凭据。',
+  clearAuthorization: '清除已保存的 Authorization',
+  clearingAuthorization: '正在清除 Authorization…',
+  authorizationCleared: '已清除保存的 Authorization。',
+  customHeaders: '自定义请求头',
+  addHeader: '添加请求头',
+  removeHeader: '移除',
+  headerName: '请求头名称',
+  headerValue: '请求头值',
+  advanced: '高级设置',
+  toolCallTimeout: '工具调用超时 毫秒',
+  failOnStartupError: '首次连接失败时将此服务视为启动失败',
 }

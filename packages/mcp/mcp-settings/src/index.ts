@@ -97,10 +97,19 @@ export function validateConfig(config: Config): void {
     if (server.authorizationRef !== undefined && !isCredentialRefName(server.authorizationRef)) {
       throw new Error(`mcp-settings: "${server.serverName}" has an invalid Authorization credential reference`)
     }
+    const headerNames = new Set<string>()
     for (const header of Object.keys(server.headers)) {
-      if (header.toLowerCase() === 'authorization') {
+      const normalized = header.trim().toLowerCase()
+      if (normalized.length === 0) {
+        throw new Error(`mcp-settings: "${server.serverName}" has an empty header name`)
+      }
+      if (normalized === 'authorization') {
         throw new Error(`mcp-settings: store Authorization for "${server.serverName}" in its credential field, not headers`)
       }
+      if (headerNames.has(normalized)) {
+        throw new Error(`mcp-settings: "${server.serverName}" has duplicate header "${header}"`)
+      }
+      headerNames.add(normalized)
     }
   }
 }

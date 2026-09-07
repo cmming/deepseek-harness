@@ -1,6 +1,6 @@
 {
   "name": "dsh-mcp-settings",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Manage Streamable HTTP MCP connections from the DeepSeek Harness settings page.",
   "type": "module",
   "main": "lib/index.js",
