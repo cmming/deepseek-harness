@@ -1,83 +1,18 @@
 /** Copy owned by the MCP settings card. */
 export type McpSettingsLocaleKey =
-  | 'title' | 'description' | 'add' | 'empty' | 'serviceName' | 'namespace'
-  | 'endpoint' | 'authorization' | 'authorizationHint' | 'authorizationSet'
-  | 'authorizationUnset' | 'enabled' | 'remove' | 'save' | 'saving'
-  | 'saved' | 'readOnly' | 'invalid' | 'connectionHint' | 'serviceId' | 'transport'
-  | 'credentialReference' | 'credentialReferenceHint' | 'clearAuthorization' | 'clearingAuthorization'
-  | 'authorizationCleared' | 'customHeaders' | 'addHeader' | 'removeHeader' | 'headerName' | 'headerValue'
-  | 'advanced' | 'toolCallTimeout' | 'failOnStartupError'
+  | 'title' | 'description' | 'add' | 'empty' | 'serviceName' | 'namespace' | 'endpoint'
+  | 'authorization' | 'authorizationHint' | 'authorizationSet' | 'authorizationUnset' | 'enabled'
+  | 'remove' | 'save' | 'saving' | 'saved' | 'readOnly' | 'invalid' | 'serviceId' | 'transport'
+  | 'credentialReference' | 'credentialReferenceHint' | 'clearAuthorization' | 'clearingAuthorization' | 'authorizationCleared'
+  | 'customHeaders' | 'addHeader' | 'removeHeader' | 'headerName' | 'headerValue' | 'advanced' | 'toolCallTimeout' | 'failOnStartupError'
+  | 'command' | 'arguments' | 'argumentsHint' | 'workingDirectory' | 'environment' | 'addEnvironment' | 'environmentName' | 'environmentValue'
+  | 'testConnection' | 'testing' | 'testHint' | 'saveBeforeTest' | 'testSuccess' | 'testFailed' | 'duration' | 'toolsFound' | 'failureReason' | 'unknownError'
+  | 'availableTools' | 'discovered' | 'toolDescription' | 'inputSchema' | 'noToolsFound' | 'noInputFields' | 'noDescription'
 
 export const en: Record<McpSettingsLocaleKey, string> = {
-  title: 'MCP services',
-  description: 'Manage Streamable HTTP MCP connections and their model-facing tool namespaces.',
-  add: 'Add MCP service',
-  empty: 'No MCP services are configured.',
-  serviceName: 'Tool namespace',
-  namespace: 'Use letters, numbers, hyphens, or underscores. Tools become mcp__<namespace>__<tool>.',
-  endpoint: 'Streamable HTTP endpoint',
-  authorization: 'Authorization header',
-  authorizationHint: 'Write-only. Enter the complete value, for example “Bearer …”. Leave blank to keep the current value.',
-  authorizationSet: 'Authorization is configured',
-  authorizationUnset: 'No Authorization value is configured',
-  enabled: 'Enable this service',
-  remove: 'Remove',
-  save: 'Save services',
-  saving: 'Saving…',
-  saved: 'Saved. The matching MCP connections are being refreshed.',
-  readOnly: 'This deployment stores settings read-only.',
-  invalid: 'Each service needs a unique namespace and a valid http(s) endpoint.',
-  connectionHint: 'Saving reconnects enabled services and re-discovers their tools. Connection failures remain visible in the Harness log.',
-  serviceId: 'Service id',
-  transport: 'Transport',
-  credentialReference: 'Credential reference',
-  credentialReferenceHint: 'Optional POSIX-style environment-variable name used to store Authorization. Changing it does not move an existing value.',
-  clearAuthorization: 'Clear stored Authorization',
-  clearingAuthorization: 'Clearing Authorization…',
-  authorizationCleared: 'Stored Authorization was cleared.',
-  customHeaders: 'Custom request headers',
-  addHeader: 'Add header',
-  removeHeader: 'Remove header',
-  headerName: 'Header name',
-  headerValue: 'Header value',
-  advanced: 'Advanced settings',
-  toolCallTimeout: 'Tool call timeout in milliseconds',
-  failOnStartupError: 'Fail this service when its initial connection fails',
+  title: 'MCP services', description: 'Manage Streamable HTTP and stdio MCP connections and their model-facing tool namespaces.', add: 'Add MCP service', empty: 'No MCP services are configured.', serviceName: 'Tool namespace', namespace: 'Use letters, numbers, hyphens, or underscores. Tools become mcp__<namespace>__<tool>.', endpoint: 'Streamable HTTP endpoint', authorization: 'Authorization header', authorizationHint: 'Write-only. Enter the complete value, for example “Bearer …”. Leave blank to keep the current value.', authorizationSet: 'Authorization is configured', authorizationUnset: 'No Authorization value is configured', enabled: 'Enable this service', remove: 'Remove', save: 'Save services', saving: 'Saving…', saved: 'Saved. The matching MCP connections are being refreshed.', readOnly: 'This deployment stores settings read-only.', invalid: 'Each service needs a unique namespace and valid transport settings.', serviceId: 'Service id', transport: 'Transport', credentialReference: 'Credential reference', credentialReferenceHint: 'Optional POSIX-style environment-variable name used to store Authorization. Changing it does not move an existing value.', clearAuthorization: 'Clear stored Authorization', clearingAuthorization: 'Clearing Authorization…', authorizationCleared: 'Stored Authorization was cleared.', customHeaders: 'Custom request headers', addHeader: 'Add header', removeHeader: 'Remove', headerName: 'Header name', headerValue: 'Header value', advanced: 'Advanced settings', toolCallTimeout: 'Tool call timeout in milliseconds', failOnStartupError: 'Fail this service when its initial connection fails', command: 'Command', arguments: 'Arguments', argumentsHint: 'One argument per line; values are passed directly without shell expansion.', workingDirectory: 'Working directory', environment: 'Environment variables', addEnvironment: 'Add environment variable', environmentName: 'Variable name', environmentValue: 'Value', testConnection: 'Test connection', testing: 'Testing…', testHint: 'Tests the saved service configuration and lists the tools reported by the server.', saveBeforeTest: 'Save the service (including any new Authorization value) before testing it.', testSuccess: 'Connection succeeded', testFailed: 'Connection failed', duration: 'Duration', toolsFound: 'Tools found', failureReason: 'Reason', unknownError: 'Unknown error', availableTools: 'Available tools', discovered: 'Discovered', toolDescription: 'Description', inputSchema: 'Input format', noToolsFound: 'The server reported no tools.', noInputFields: 'This tool has no declared input fields.', noDescription: 'No description was provided by the server.',
 }
 
 export const zh: Record<McpSettingsLocaleKey, string> = {
-  title: 'MCP 服务',
-  description: '管理 Streamable HTTP MCP 连接及其面向模型的工具命名空间。',
-  add: '添加 MCP 服务',
-  empty: '尚未配置 MCP 服务。',
-  serviceName: '工具命名空间',
-  namespace: '仅可使用字母、数字、连字符或下划线。工具名为 mcp__<命名空间>__<工具名>。',
-  endpoint: 'Streamable HTTP 地址',
-  authorization: 'Authorization 请求头',
-  authorizationHint: '只写入凭据存储。请输入完整值，例如“Bearer …”；留空表示保留当前值。',
-  authorizationSet: '已配置 Authorization',
-  authorizationUnset: '尚未配置 Authorization',
-  enabled: '启用此服务',
-  remove: '删除',
-  save: '保存服务',
-  saving: '保存中…',
-  saved: '已保存，正在刷新对应 MCP 连接和工具列表。',
-  readOnly: '当前部署的设置为只读。',
-  invalid: '每项服务都需要唯一的命名空间，以及有效的 http(s) 地址。',
-  connectionHint: '保存后会重连已启用服务并重新发现工具；连接失败会记录在 Harness 日志中。',
-  serviceId: '服务标识',
-  transport: '传输方式',
-  credentialReference: '凭据引用',
-  credentialReferenceHint: '可选的 POSIX 环境变量名称，用于存储 Authorization。修改引用不会迁移已有凭据。',
-  clearAuthorization: '清除已保存的 Authorization',
-  clearingAuthorization: '正在清除 Authorization…',
-  authorizationCleared: '已清除保存的 Authorization。',
-  customHeaders: '自定义请求头',
-  addHeader: '添加请求头',
-  removeHeader: '移除',
-  headerName: '请求头名称',
-  headerValue: '请求头值',
-  advanced: '高级设置',
-  toolCallTimeout: '工具调用超时 毫秒',
-  failOnStartupError: '首次连接失败时将此服务视为启动失败',
+  title: 'MCP 服务', description: '管理 Streamable HTTP 和 stdio MCP 连接及其面向模型的工具命名空间。', add: '添加 MCP 服务', empty: '尚未配置 MCP 服务。', serviceName: '工具命名空间', namespace: '仅可使用字母、数字、连字符或下划线。工具名为 mcp__<命名空间>__<工具名>。', endpoint: 'Streamable HTTP 地址', authorization: 'Authorization 请求头', authorizationHint: '只写入凭据存储。请输入完整值，例如“Bearer …”；留空表示保留当前值。', authorizationSet: '已配置 Authorization', authorizationUnset: '尚未配置 Authorization', enabled: '启用此服务', remove: '删除', save: '保存服务', saving: '保存中…', saved: '已保存，正在刷新对应 MCP 连接和工具列表。', readOnly: '当前部署的设置为只读。', invalid: '每项服务都需要唯一的命名空间，以及有效的传输方式配置。', serviceId: '服务标识', transport: '传输方式', credentialReference: '凭据引用', credentialReferenceHint: '可选的 POSIX 环境变量名称，用于存储 Authorization。修改引用不会迁移已有凭据。', clearAuthorization: '清除已保存的 Authorization', clearingAuthorization: '正在清除 Authorization…', authorizationCleared: '已清除保存的 Authorization。', customHeaders: '自定义请求头', addHeader: '添加请求头', removeHeader: '移除', headerName: '请求头名称', headerValue: '请求头值', advanced: '高级设置', toolCallTimeout: '工具调用超时（毫秒）', failOnStartupError: '首次连接失败时将此服务视为启动失败', command: '启动命令', arguments: '命令参数', argumentsHint: '每行一个参数，会直接传给程序，不经过 shell 展开。', workingDirectory: '工作目录', environment: '环境变量', addEnvironment: '添加环境变量', environmentName: '变量名', environmentValue: '变量值', testConnection: '测试连接', testing: '测试中…', testHint: '使用已保存的服务配置进行连接，并列出服务返回的工具。', saveBeforeTest: '请先保存服务（包括新输入的 Authorization），再进行测试。', testSuccess: '连接成功', testFailed: '连接失败', duration: '耗时', toolsFound: '发现工具数', failureReason: '失败原因', unknownError: '未知错误', availableTools: '可用工具', discovered: '已发现', toolDescription: '描述', inputSchema: '输入格式', noToolsFound: '服务没有返回工具。', noInputFields: '该工具未声明输入字段。', noDescription: '服务未提供工具描述。',
 }

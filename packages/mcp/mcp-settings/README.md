@@ -2,7 +2,7 @@
 
 A DeepSeek Harness bundle that adds an MCP service manager to **Settings → Plugins → Plugin configuration**.
 
-It manages **Streamable HTTP** MCP servers. Every enabled service is mounted as
+It manages **Streamable HTTP** and **stdio** MCP servers. Every enabled service is mounted as
 one `@deepseek-ai/dsh-mcp-client` instance, so the discovered tools retain the
 standard `mcp__<serverName>__<toolName>` names. Adding, editing, enabling,
 disabling, or removing a service refreshes the live connection; a Harness
@@ -13,7 +13,7 @@ restart is not required.
 Install the built bundle into a Web profile:
 
 ```sh
-dsh plugin --profile web add ./dsh-mcp-settings-0.1.2.tgz
+dsh plugin --profile web add ./dsh-mcp-settings-0.1.7.tgz
 dsh --profile web
 ```
 
@@ -26,13 +26,15 @@ The service card exposes every field implemented by this package:
 | Field | Behavior |
 | --- | --- |
 | Service id | Generated when a service is added and shown read-only, so its credential association remains stable. |
-| Transport | Shown as Streamable HTTP, which is the only transport this package currently implements. |
-| Tool namespace and endpoint | Required service identity and HTTP(S) endpoint. |
+| Transport | Select Streamable HTTP or stdio. The card reveals only the fields relevant to the selection. |
+| HTTP endpoint | Required HTTP(S) endpoint. URLs containing credentials are rejected. |
+| stdio command | Command, one argument per line, working directory, and additional environment variables. Arguments are passed directly without shell expansion. |
 | Authorization and credential reference | Authorization is write-only. The credential reference can be selected or changed, and a stored value can be cleared without being revealed. |
 | Custom request headers | Editable key/value headers. `Authorization` is rejected so secrets remain in the credentials provider. |
 | Tool call timeout | Positive integer in milliseconds; defaults to 60000. |
 | Startup failure policy | Select whether a failed first connection should fail the service instance. |
 | Enabled state | Disabled services are not connected and do not contribute tools. |
+| Test connection | Uses the saved Host-side configuration and stored credentials to make a temporary connection. On success, it shows a collapsible, tool-style list from paginated `tools/list`: count, name, description, and declared input fields/types. Values configured as credentials, headers, or stdio environment values are never returned in the diagnostic message. |
 
 ## Add the CM Agent endpoint
 
@@ -63,6 +65,7 @@ The UI is optional. A deployment can seed connections through its own patch:
           - id: cmagent
             enabled: true
             serverName: cmagent
+            transport: streamable-http
             url: http://localhost:8080/mcp
             authorizationRef: CM_AGENT_MCP_AUTHORIZATION
             headers: {}
@@ -77,6 +80,25 @@ example `Bearer …`.
 Only non-sensitive headers belong in `headers`. The plugin rejects an
 `Authorization` entry there so access tokens cannot accidentally enter the
 settings document.
+
+For a local stdio server, use this shape instead:
+
+```yaml
+          - id: local-files
+            enabled: true
+            serverName: files
+            transport: stdio
+            command: npx
+            args: [--yes, "@modelcontextprotocol/server-filesystem", "C:\\workspace"]
+            env: {}
+            cwd: ""
+            toolCallTimeoutMs: 60000
+            failOnStartupError: false
+```
+
+Run **Save services** before **Test connection**. This ensures a new write-only
+Authorization value is stored by the credential provider before the Host starts
+the temporary test connection.
 
 ## Build from source
 

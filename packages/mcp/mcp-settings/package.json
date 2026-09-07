@@ -1,7 +1,7 @@
 {
   "name": "dsh-mcp-settings",
-  "version": "0.1.2",
-  "description": "Manage Streamable HTTP MCP connections from the DeepSeek Harness settings page.",
+  "version": "0.1.7",
+  "description": "Manage Streamable HTTP and stdio MCP connections from the DeepSeek Harness settings page.",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -14,12 +14,22 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./typert": {
+      "types": "./lib/types/typert.d.ts",
+      "default": "./lib/typert.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/client.js",
     "lib/types/**/*.d.ts",
+    "lib/types/**/*.js",
+    "lib/typert.js",
     "cordis.patch.yml",
     "README.md"
   ],
@@ -42,11 +52,15 @@
     "@deepseek-ai/cordis": "^4.0.2",
     "@deepseek-ai/dsh-credentials": "^0.1.2-rc.1",
     "@deepseek-ai/dsh-mcp-client": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-subprocess": "^0.1.2-rc.1",
     "@deepseek-ai/dsh-settings": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-typert-protocol": "^0.1.2-rc.1",
     "@deepseek-ai/dsh-tools": "^0.1.2-rc.1"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "^3.18.2"
+    "@deepseek-ai/schemastery": "^3.18.2",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-api-remotes": "workspace:^",
@@ -58,8 +72,10 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-mcp-client": "workspace:^",
+    "@deepseek-ai/dsh-subprocess": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
+    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"
