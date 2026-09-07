@@ -134,13 +134,13 @@ export function McpSettingsCard(props: McpSettingsCardProps) {
   const test = async (server: McpServerSettings) => {
     const saved = state.servers.find(candidate => candidate.id === server.id)
     const pendingAuthorization = authorization[server.id]?.trim().length !== 0
-    if (saved === undefined || JSON.stringify(saved) !== JSON.stringify(server) || pendingAuthorization) {
+    if (saved === undefined || JSON.stringify(saved) !== JSON.stringify(server)) {
       setFailed(true)
       setMessage(props.t('saveBeforeTest'))
       return
     }
     setTesting(server.id)
-    setMessage(undefined)
+    setMessage(pendingAuthorization ? props.t('testUsesSavedAuthorization') : undefined)
     setFailed(false)
     try {
       const result = await props.testConnection(server.id)

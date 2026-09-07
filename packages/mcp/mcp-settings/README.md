@@ -13,7 +13,7 @@ restart is not required.
 Install the built bundle into a Web profile:
 
 ```sh
-dsh plugin --profile web add ./dsh-mcp-settings-0.1.7.tgz
+dsh plugin --profile web add ./dsh-mcp-settings-0.1.8.tgz
 dsh --profile web
 ```
 
